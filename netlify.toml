@@ -1,0 +1,7 @@
+[build]
+  functions = "functions"
+  
+[[redirects]]
+  from = "/pusher/auth"
+  to = "/.netlify/functions/auth"
+  status = 200
