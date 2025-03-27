@@ -68,7 +68,14 @@ app.post("/pusher/auth", (req, res) => {
   }
 });
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Server error:", err);
+  res.status(500).send("Server error: " + err.message);
+});
+
+// Sørg for at serveren lytter på alle interfaces
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server kører på port ${PORT}`);
 });
