@@ -1,4 +1,5 @@
 const Pusher = require("pusher");
+const querystring = require("querystring");
 
 // Initialisér Pusher
 const pusher = new Pusher({
@@ -35,9 +36,25 @@ exports.handler = async function (event, context) {
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const socketId = body.socket_id;
-    const channel = body.channel_name;
+    // Analyse af indkommende data - håndter både JSON og form-encoded
+    let socketId, channel;
+
+    // Check Content-Type header to determine parsing strategy
+    const contentType = event.headers["content-type"] || "";
+
+    if (contentType.includes("application/json")) {
+      // Parse JSON body
+      const body = JSON.parse(event.body);
+      socketId = body.socket_id;
+      channel = body.channel_name;
+    } else {
+      // Parse form-encoded body
+      const formData = querystring.parse(event.body);
+      socketId = formData.socket_id;
+      channel = formData.channel_name;
+    }
+
+    console.log("Request parsed:", { socketId, channel });
 
     if (!socketId || !channel) {
       return {
