@@ -5,10 +5,24 @@ const Pusher = require("pusher");
 
 const app = express();
 
-// Middleware
+// Middleware med mere specifik CORS-konfiguration
+app.use(
+  cors({
+    // Tillad anmodninger fra alle oprindelser (du kan begrænse dette til specifikke domæner)
+    origin: "*",
+    // Tillad credentials (cookies, autorisation headers osv.)
+    credentials: true,
+    // Hvilke metoder der er tilladt
+    methods: ["GET", "POST", "OPTIONS"],
+    // Tillad disse headers i anmodninger
+    allowedHeaders: ["Content-Type", "Authorization"],
+    // Cache CORS-præflyvningsanmodninger i 86400 sekunder (1 dag)
+    maxAge: 86400,
+  })
+);
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors());
 
 // Initialisér Pusher
 const pusher = new Pusher({
@@ -19,31 +33,39 @@ const pusher = new Pusher({
 });
 
 // Authenticate endpoint
+app.options("/pusher/auth", cors());
 app.post("/pusher/auth", (req, res) => {
+  console.log("Auth anmodning modtaget:", {
+    socketId: req.body.socket_id,
+    channel: req.body.channel_name,
+    headers: req.headers,
+    body: req.body,
+  });
+
   const socketId = req.body.socket_id;
   const channel = req.body.channel_name;
 
-  // For presence channels, kan du tilføje brugerdata
-  if (channel.startsWith("presence-")) {
-    const userData = {
-      user_id: "display-" + Date.now(), // Genererer et unikt ID
-      user_info: {
-        type: "display",
-      },
-    };
+  try {
+    if (channel.startsWith("presence-")) {
+      const userData = {
+        user_id: "display-" + Date.now(),
+        user_info: {
+          type: "display",
+        },
+      };
 
-    const auth = pusher.authenticate(socketId, channel, userData);
-    res.send(auth);
-  } else {
-    // For private kanaler
-    const auth = pusher.authenticate(socketId, channel);
-    res.send(auth);
+      const auth = pusher.authenticate(socketId, channel, userData);
+      console.log("Auth svar (presence):", auth);
+      res.send(auth);
+    } else {
+      const auth = pusher.authenticate(socketId, channel);
+      console.log("Auth svar (private):", auth);
+      res.send(auth);
+    }
+  } catch (error) {
+    console.error("Auth fejl:", error);
+    res.status(500).send({ error: error.message });
   }
-});
-
-// Simpel health check route
-app.get("/", (req, res) => {
-  res.send("Pusher Auth Server kører!");
 });
 
 const PORT = process.env.PORT || 3000;
