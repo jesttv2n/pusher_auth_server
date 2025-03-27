@@ -1,9 +1,4 @@
 const Pusher = require("pusher");
-const cors = require("cors")({
-  origin: "*",
-  credentials: true,
-  methods: ["POST", "OPTIONS"],
-});
 
 // Initialisér Pusher
 const pusher = new Pusher({
@@ -13,16 +8,19 @@ const pusher = new Pusher({
   cluster: process.env.PUSHER_CLUSTER || "eu",
 });
 
+// CORS headers
+const headers = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 exports.handler = async function (event, context) {
   // Håndter CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
+      headers: headers,
       body: "",
     };
   }
@@ -31,6 +29,7 @@ exports.handler = async function (event, context) {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
+      headers: headers,
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
@@ -43,6 +42,7 @@ exports.handler = async function (event, context) {
     if (!socketId || !channel) {
       return {
         statusCode: 400,
+        headers: headers,
         body: JSON.stringify({ error: "socket_id and channel_name required" }),
       };
     }
@@ -63,8 +63,8 @@ exports.handler = async function (event, context) {
     return {
       statusCode: 200,
       headers: {
+        ...headers,
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify(auth),
     };
@@ -72,6 +72,7 @@ exports.handler = async function (event, context) {
     console.error("Auth error:", error);
     return {
       statusCode: 500,
+      headers: headers,
       body: JSON.stringify({ error: error.message }),
     };
   }
